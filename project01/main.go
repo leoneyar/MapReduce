@@ -78,5 +78,6 @@ func main() {
 	}
 
 	endTime := time.Now().UnixNano()
+	fmt.Println("执行时间")
 	fmt.Println(float64((endTime - startTime)) / 1e9)
 }
