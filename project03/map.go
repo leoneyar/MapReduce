@@ -15,6 +15,9 @@ func Map(input string) (ans map[string]int) {
 		for len(word) > 0 && (word[len(word)-1] < 'a' || word[len(word)-1] > 'z') {
 			word = word[:len(word)-1]
 		}
+		if word == "" {
+			continue
+		}
 		ans[word]++
 	}
 	return
