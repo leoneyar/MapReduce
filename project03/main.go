@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"math"
 	"os"
@@ -10,14 +11,14 @@ import (
 	"time"
 )
 
-const chunkSize = 1 << (16) //分块大小,最小取12左右
+const chunkSize = 1 << (20) //分块大小,最小取12左右
 func main() {
 	//读取文件的案例
 	//读取文件的内容并显示在终端，使用os.Open, file.Close, bufio.NewReader(), reader.ReadString
 
 	startTime := time.Now().UnixNano()
-	//path := "D:/VSCode/gocode/src/MapReduce/book/dataset1/test.txt"
-	path := "D:/VSCode/gocode/src/MapReduce/book/novel.txt"
+	path := "D:/VSCode/gocode/src/MapReduce/book/dataset1/test.txt"
+	//path := "D:/VSCode/gocode/src/MapReduce/book/novel.txt"
 	//计算分块数目
 	fileInfo, err := os.Stat(path)
 	if err != nil {
@@ -32,27 +33,23 @@ func main() {
 		return
 	}
 	defer f.Close()
-
 	//创建Redeuce输入通道
-	reduceIn := make(chan map[string]int, 1000)
+	reduceIn := make(chan map[string]int, 100)
 	var wg sync.WaitGroup
 	var wg2 sync.WaitGroup
 	//对分块的文件进行处理
-	var i int64 = 1
-	for ; i <= int64(chunkNum); i++ {
+	r := bufio.NewReader(f)
+	for i := 0; i < int(chunkNum); i++ {
+		buf := make([]byte, chunkSize)
+		r.Read(buf)
 		wg.Add(1)
-		go func(i int64) {
+		go func(b []byte) {
 			defer wg.Done()
-			b := make([]byte, chunkSize)
-			f.Seek((i-1)*chunkSize, 0)
-			if len(b) > int(fileInfo.Size()-(i-1)*chunkSize) {
-				b = make([]byte, fileInfo.Size()-(i-1)*chunkSize)
-			}
-			f.Read(b)
 			reduceIn <- Map(string(b))
+		}(buf)
 
-		}(i)
 	}
+
 	poolNum := 10                             //并行池数量
 	result := make([]map[string]int, poolNum) //分配内存
 	for i := 0; i < poolNum; i++ {
@@ -74,6 +71,7 @@ func main() {
 	close(reduceIn)
 	wg2.Wait()
 	endTime := time.Now().UnixNano()
+
 	//合并每个reduce之后的结果
 	for i := 1; i < poolNum; i++ {
 		for k, v := range result[i] {
